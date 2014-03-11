@@ -13,74 +13,32 @@
 <body>
 Color Scheme<br>
 <textarea id="color-scheme">
-[BLACK_R:0]
-[BLACK_G:0]
-[BLACK_B:0]
-[BLUE_R:44]
-[BLUE_G:136]
-[BLUE_B:222]
-[GREEN_R:32]
-[GREEN_G:144]
-[GREEN_B:32]
-[CYAN_R:0]
-[CYAN_G:128]
-[CYAN_B:128]
-[RED_R:176]
-[RED_G:8]
-[RED_B:8]
-[MAGENTA_R:176]
-[MAGENTA_G:56]
-[MAGENTA_B:160]
-[BROWN_R:120]
-[BROWN_G:94]
-[BROWN_B:48]
-[LGRAY_R:176]
-[LGRAY_G:176]
-[LGRAY_B:176]
-[DGRAY_R:120]
-[DGRAY_G:120]
-[DGRAY_B:120]
-[LBLUE_R:144]
-[LBLUE_G:202]
-[LBLUE_B:255]
-[LGREEN_R:66]
-[LGREEN_G:232]
-[LGREEN_B:40]
-[LCYAN_R:128]
-[LCYAN_G:224]
-[LCYAN_B:216]
-[LRED_R:255]
-[LRED_G:0]
-[LRED_B:0]
-[LMAGENTA_R:255]
-[LMAGENTA_G:84]
-[LMAGENTA_B:255]
-[YELLOW_R:255]
-[YELLOW_G:236]
-[YELLOW_B:48]
-[WHITE_R:255]
-[WHITE_G:255]
-[WHITE_B:255]
+[BLACK_R:0][BLACK_G:0][BLACK_B:0]
+[BLUE_R:44][BLUE_G:136][BLUE_B:222]
+[GREEN_R:32][GREEN_G:144][GREEN_B:32]
+[CYAN_R:0][CYAN_G:128][CYAN_B:128]
+[RED_R:176][RED_G:8][RED_B:8]
+[MAGENTA_R:176][MAGENTA_G:56][MAGENTA_B:160]
+[BROWN_R:120][BROWN_G:94][BROWN_B:48]
+[LGRAY_R:176][LGRAY_G:176][LGRAY_B:176]
+[DGRAY_R:120][DGRAY_G:120][DGRAY_B:120]
+[LBLUE_R:144][LBLUE_G:202][LBLUE_B:255]
+[LGREEN_R:66][LGREEN_G:232][LGREEN_B:40]
+[LCYAN_R:128][LCYAN_G:224][LCYAN_B:216]
+[LRED_R:255][LRED_G:0][LRED_B:0]
+[LMAGENTA_R:255][LMAGENTA_G:84][LMAGENTA_B:255]
+[YELLOW_R:255][YELLOW_G:236][YELLOW_B:48]
+[WHITE_R:255][WHITE_G:255][WHITE_B:255]
 </textarea>
 
-<div class="palette background">
-Background Color
+<div class="palette background">Background Color</div>
 <br>
-</div>
-<br><br>
-<div class="palette foreground">
-Foreground Color
-<br>
-</div>
+<div class="palette foreground">Foreground Color</div>
 
-<img id="tileset0" src="Phssthpok_24x24.png" style="display: none;">
 <img id="tileset" src="Phssthpok_64x64.png" style="display: none;">
 
-canvas<br>
-<canvas id="canvas" width="1024" height="1024" style="background-color: magenta;"></canvas>
-
 <p>
-svg<br>
+<canvas id="canvas" width="1024" height="1024"></canvas>
 
 <script>
 var $ = document.getElementById.bind(document);
@@ -89,7 +47,10 @@ var $$ = document.querySelectorAll.bind(document);
 function setBackgroundColor(color) {
     $("canvas").style.backgroundColor = color;
 }
+
 function setForegroundColor(color) {
+    // use multiply blending to draw the tileset in the foreground color
+    // then use destination-atop compositing to mask the colored image to the tileset's alpha channel
     var canvas = $("canvas");
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -101,54 +62,76 @@ function setForegroundColor(color) {
     ctx.drawImage(tileset, 0, 0, canvas.width, canvas.height);
 }
 
+window.savedBackgroundColor = "rgb(120,94,48)";
+window.savedForegroundColor = "white";
+
+function setSavedColors() {
+    setBackgroundColor(window.savedBackgroundColor);
+    setForegroundColor(window.savedForegroundColor);
+}
+
 var tileset = $("tileset");
-tileset.onload = function() {
-    setBackgroundColor("darkmagenta");
-    setForegroundColor("white");
-}
+tileset.onload = setSavedColors;
 
-var colorScheme = $("color-scheme").value.split("\n")
-var colors = {};
-for (var i = 0; i < colorScheme.length; i++) {
-    var directive = colorScheme[i];
-    var match = directive.match(/\[(.*)_(.):(\d+)\]/);
-    if (match) {
-        colors[match[1]] = colors[match[1]] || {};
-        colors[match[1]][match[2]] = parseInt(match[3]);
-    }
-}
-var palettes = $$(".palette");
-for (var i = 0; i < palettes.length; i++) {
-    var palette = palettes[i];
-    var j = 0;
-    for (var colorName in colors) {
-        var color = colors[colorName];
-        var swatch = document.createElement("div");
-        swatch.className = "swatch";
-        swatch.style.backgroundColor = "rgb("+color.R+","+color.G+","+color.B+")"
-        swatch.innerText = colorName;
-
-        if (palette.classList.contains("background")) {
-            swatch.addEventListener("mouseenter", function(event){
-                setBackgroundColor(this.style.backgroundColor);
-            });
-        }
-        else {
-            swatch.addEventListener("mouseenter", function(event){
-                setForegroundColor(this.style.backgroundColor);
-            });
-        }
-
-        palette.appendChild(swatch);
-        if (j++ % 8 == 7) {
-            palette.appendChild(document.createElement("br"));
+function makeSwatches() {
+    var colorScheme = $("color-scheme").value.split(/\n|\]/)
+    var colors = {};
+    for (var i = 0; i < colorScheme.length; i++) {
+        var directive = colorScheme[i];
+        var match = directive.match(/\[(.*)_(.):(\d+)\]?/);
+        if (match) {
+            colors[match[1]] = colors[match[1]] || {};
+            colors[match[1]][match[2]] = parseInt(match[3]);
         }
     }
+    var palettes = $$(".palette");
+    for (var i = 0; i < palettes.length; i++) {
+        var palette = palettes[i];
+        for (var j = palette.children.length-1; j >= 0; j--) {
+            palette.children[j].remove();
+        }
+        palette.appendChild(document.createElement("br"));
+
+        var j = 0;
+        for (var colorName in colors) {
+            var color = colors[colorName];
+            var swatch = document.createElement("div");
+            swatch.className = "swatch";
+            swatch.style.backgroundColor = "rgb("+color.R+","+color.G+","+color.B+")"
+            swatch.innerText = colorName;
+            if (j < 8) {
+            // if (color.R + color.G + color.B < 225) {
+                swatch.style.color = "white";
+            }
+
+            if (palette.classList.contains("background")) {
+                swatch.addEventListener("mouseenter", function(event){
+                    setBackgroundColor(this.style.backgroundColor);
+                });
+                swatch.addEventListener("click", function(event) {
+                    window.savedBackgroundColor = this.style.backgroundColor;
+                });
+            }
+            else {
+                swatch.addEventListener("mouseenter", function(event){
+                    setForegroundColor(this.style.backgroundColor);
+                });
+                swatch.addEventListener("click", function(event) {
+                    window.savedForegroundColor = this.style.backgroundColor;
+                });
+            }
+
+            palette.appendChild(swatch);
+            if (j++ % 8 == 7) {
+                palette.appendChild(document.createElement("br"));
+            }
+        }
+        palette.addEventListener("mouseleave", setSavedColors);
+    }
 }
+$("color-scheme").addEventListener("change", makeSwatches);
+makeSwatches();
+
 </script>
 </body>
 </html>
-
-<pre>
-use multiply blending to draw the tileset in the foreground color
-then use destination-atop compositing to mask the colored image to the tileset's alpha channel
