@@ -7,6 +7,10 @@
             width: 80px;
             padding: 1em;
             text-align: center;
+            color: white;
+        }
+        .swatch:nth-child(n+10) {
+            color: black;
         }
     </style>
 </head>
@@ -41,19 +45,56 @@ Color Scheme<br>
 <img id="tileset" src="Phssthpok_64x64.png" style="display: none;">
 
 <p>
-<canvas id="canvas" width="1024" height="1024"></canvas>
+
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"> 
+  <defs>
+    <image id="tileseti" xlink:href="Phssthpok_64x64.png" x="0" y="0" height="512" width="512" />
+    <filter id="colorize">
+      <!-- <feOffset in="SourceGraphic" result="fg-solid"/> -->
+      <!-- <feFlood flood-color="cyan" result="fg-solid"/> -->
+      <feBlend mode="multiply"  in2="SourceGraphic" result="fg-mult"/>
+      <feComposite in="fg-mult" in2="SourceAlpha" operator="in" result="fg-masked"/>
+      <!-- <feMerge>
+        <feMergeNode in="fg-masked">
+        <feMergeNode in="SourceGraphic">
+      </feMerge> -->
+    </filter>
+    <filter id="tilesetize" primitiveUnits="objectBoundingBox">
+      <!-- <feOffset in="BackgroundImage" result="tileset"/> -->
+      <!-- <feImage xlink:href="#tileseti" x="0" y="0" width="100%" height="100%" result="tileset"/> -->
+      <feImage xlink:href="Phssthpok_64x64.png" x="0" y="0" width="100%" height="100%" result="tileset"/>
+      <feComposite in="SourceGraphic" in2="tileset" operator="in" result="fg-masked"/>
+      <feBlend mode="multiply" in="fg-masked" in2="tileset" result="fg-mult"/>
+      <feMerge>
+        <feMergeNode in="fg-mult"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g enable-background="new">
+      <rect id="background-fill" x="0" y="0" width="512" height="512" />
+      <rect id="foreground-fill" x="0" y="0" width="512" height="512" filter="url(#tilesetize)"/>
+  </g>
+  <g transform="translate(275,25)">
+  </g>
+</svg>
+
+<canvas id="canvas" width="512" height="512" style="background: black;"></canvas>
 
 <script>
 var $ = document.getElementById.bind(document);
 var $$ = document.querySelectorAll.bind(document);
 
 function setBackgroundColor(color) {
+    $("background-fill").setAttribute("fill", color);
     $("canvas").style.backgroundColor = color;
 }
 
 function setForegroundColor(color) {
+    $("foreground-fill").setAttribute("fill", color);
     // use multiply blending to draw the tileset in the foreground color
     // then use destination-atop compositing to mask the colored image to the tileset's alpha channel
+    var tileset = $("tileset");
     var canvas = $("canvas");
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -73,8 +114,7 @@ function setSavedColors() {
     setForegroundColor(window.savedForegroundColor);
 }
 
-var tileset = $("tileset");
-tileset.onload = setSavedColors;
+$("tileset").onload = setSavedColors;
 
 function makeSwatches() {
     var colorScheme = $("color-scheme").value.split(/\n|\]/)
@@ -101,11 +141,11 @@ function makeSwatches() {
             var swatch = document.createElement("div");
             swatch.className = "swatch";
             swatch.style.backgroundColor = "rgb("+color.R+","+color.G+","+color.B+")"
-            swatch.innerText = colorName;
-            if (j < 8) {
-            // if (color.R + color.G + color.B < 225) {
-                swatch.style.color = "white";
-            }
+            swatch.textContent = colorName;
+            // if (j < 8) {
+            // if (color.R + color.G + color.B < 384) {
+            //     swatch.style.color = "white";
+            // }
 
             if (palette.classList.contains("background")) {
                 swatch.addEventListener("mouseenter", function(event){
