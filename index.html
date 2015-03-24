@@ -2,6 +2,9 @@
 <head>
     <title>TileSettr</title>
     <style>
+        .palette {
+            clear: both;
+        }
         .swatch {
             display: inline-block;
             width: 80px;
@@ -12,10 +15,30 @@
         .swatch:nth-child(n+10) {
             color: black;
         }
+        .preview {
+            display: inline-block;
+        }
+        #drop-target {
+            background: #ccc;
+            padding: 2em;
+            margin: 1em;
+            border-radius: 2em;
+            text-align: center;
+        }
+        #color-scheme {
+            height: 7em;
+            width: 32em;
+        }
+        .inline {
+            vertical-align: top;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
-Color Scheme<br>
+
+<p class="inline">
+Paste Color Scheme Here:<br>
 <textarea id="color-scheme">
 [BLACK_R:0][BLACK_G:0][BLACK_B:0]
 [BLUE_R:44][BLUE_G:136][BLUE_B:222]
@@ -34,15 +57,26 @@ Color Scheme<br>
 [YELLOW_R:255][YELLOW_G:236][YELLOW_B:48]
 [WHITE_R:255][WHITE_G:255][WHITE_B:255]
 </textarea>
+</p>
 
-<div class="palette background">Background Color</div>
+<p id="drop-target" class="inline">
+<u>Drop Tileset Here</u>
 <br>
-<div class="palette foreground">Foreground Color</div>
-
+<br>
+<span id="tileset-name">Phssthpok_64x64.png</span>
 <img id="tileset" src="Phssthpok_64x64.png" style="display: none;">
+</p>
+
+
+
+<p class="palette background">Background Color</p>
+
+<p class="palette foreground">Foreground Color</p>
 
 <p>
 
+<div class="preview">
+SVG<br>
 <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg"> 
   <defs>
     <image id="tileseti" xlink:href="Phssthpok_64x64.png" x="0" y="0" height="512" width="512" />
@@ -75,8 +109,12 @@ Color Scheme<br>
   <g transform="translate(275,25)">
   </g>
 </svg>
+</div>
 
-<canvas id="canvas" width="512" height="512" style="background: black;"></canvas>
+<div class="preview">
+    Canvas<br>
+    <canvas id="canvas" width="512" height="512" style="background: black;"></canvas>
+</div>
 
 <script>
 var $ = document.getElementById.bind(document);
@@ -171,6 +209,55 @@ function makeSwatches() {
 }
 $("color-scheme").addEventListener("change", makeSwatches);
 makeSwatches();
+
+function onEvent(element, type, handler) {
+    if (element.addEventListener) {
+        element.addEventListener(type, handler, false);
+    } else if (element.attachEvent) {
+        element.attachEvent("on" + type, handler);
+    } else {
+        element["on" + type] = handler;
+    }
+}
+
+var dropTarget = $("drop-target");
+onEvent(document.body, "dragover", function(event){
+    event.preventDefault();
+});
+onEvent(document.body, "drop", function(event){
+    event.preventDefault();
+});
+onEvent(dropTarget, "dragenter", function(event){
+    event.dataTransfer.effectAllowed = 'copyMove';
+    event.dataTransfer.dropEffect = 'copy';
+    dropTarget.style.backgroundColor = '#999';
+    return true;
+});
+onEvent(dropTarget, "dragover", function(event){
+    event.dataTransfer.effectAllowed = 'copyMove';
+    event.dataTransfer.dropEffect = 'copy';
+    dropTarget.style.backgroundColor = '#999';
+    return true;
+});
+onEvent(dropTarget, "dragleave", function(event){
+    dropTarget.style.backgroundColor = '';
+    return true;
+});
+onEvent(dropTarget, "drop", function(event){
+    dropTarget.style.backgroundColor = '';
+    var file = event.dataTransfer.files[0];
+    $('tileset-name').textContent = file.name;
+    var reader = new FileReader();
+    reader.onload = function(e){
+        var dataURL = e.target.result;
+        var tileset = $('tileset');
+        tileset.src = dataURL;
+        setSavedColors();
+        // TODO: re-instantiate SVG as well
+    };
+    reader.readAsDataURL(file);
+    return true;
+});
 
 </script>
 </body>
